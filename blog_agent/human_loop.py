@@ -85,3 +85,40 @@ def human_review(draft: str) -> str | None:
             return response
 
         print(f"Unknown command: '{cmd}'. Try: approve, change <feedback>, rewrite, lint, stop")
+
+
+def human_approval_loop(
+    draft: str,
+    research_brief: str = "",
+    review: str = "",
+    max_rounds: int = 5,
+) -> tuple[str, list[str]]:
+    """Run human review loop with automatic editor feedback.
+
+    Returns:
+        (final_draft, feedback_history)
+    """
+    from blog_agent.editor import Editor
+
+    editor = Editor()
+    draft_history = [draft]
+    feedback_history: list[str] = []
+
+    for round_num in range(max_rounds):
+        feedback = human_review(draft)
+
+        if feedback is None:
+            # Human approved
+            print("\n✅ Approved. Saving draft.")
+            return draft, feedback_history
+
+        feedback_history.append(feedback)
+        print(f"\n📝 Editor applying feedback ({round_num + 1}/{max_rounds})...")
+
+        draft = editor.edit(draft, review, research_brief)
+        draft_history.append(draft)
+
+        print(f"\n✅ Draft updated. {max_rounds - round_num - 1} rounds remaining.\n")
+
+    print(f"\n⚠️ Reached max rounds ({max_rounds}). Returning latest draft.")
+    return draft, feedback_history
