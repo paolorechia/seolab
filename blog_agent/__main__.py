@@ -31,11 +31,15 @@ from blog_agent.human_loop import human_approval_loop
 def write_blog(
     topic: str,
     product: str = "",
-    iterations: int = 3,
+    iterations: int = 2,
     human_loop: bool = False,
     batch: bool = False,
+    fast: bool = False,
 ) -> str:
     """Full pipeline: research → SEO → write → review → edit → [human loop].
+
+    Args:
+        fast: Skip auto-edit loop (just research → write → review)
 
     Returns:
         draft text (so caller can print/save as needed)
@@ -67,12 +71,15 @@ def write_blog(
     review = w.review(draft)
 
     # 5. Edit
-    print(f"\n📝 Editing ({iterations} auto-iterations)...")
-    e = Editor()
-    edit_result = e.edit_with_iteration(
-        draft, review, research_brief, max_iterations=iterations
-    )
-    draft = edit_result["final_draft"]
+    if fast:
+        print(f"\n⏭️ Skipping auto-edit (--fast)")
+    else:
+        print(f"\n📝 Editing ({iterations} auto-iterations)...")
+        e = Editor()
+        edit_result = e.edit_with_iteration(
+            draft, review, research_brief, max_iterations=iterations
+        )
+        draft = edit_result["final_draft"]
 
     # 6. Human loop
     if human_loop:
@@ -100,7 +107,7 @@ def main():
     parser.add_argument("topic", help="The topic to write about")
     parser.add_argument("--product", default="", help="Product name (for SEO context)")
     parser.add_argument(
-        "--iterations", type=int, default=3,
+        "--iterations", type=int, default=2,
         help="Auto-edit iterations before human review",
     )
     parser.add_argument(
@@ -113,6 +120,10 @@ def main():
         "--batch", action="store_true",
         help="CI mode — no output, just save and exit 0",
     )
+    parser.add_argument(
+        "--fast", action="store_true",
+        help="Skip auto-edit loop (just research → write → review)",
+    )
     args = parser.parse_args()
 
     draft = write_blog(
@@ -121,6 +132,7 @@ def main():
         iterations=args.iterations,
         human_loop=args.loop,
         batch=args.batch,
+        fast=args.fast,
     )
 
     if args.print:
