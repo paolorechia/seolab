@@ -219,7 +219,7 @@ class ProductKeywordPlanner:
             lines.append(f"\n{i}. {t['topic_title']}")
             lines.append(f"   Intent: {t['intent']}")
             lines.append(f"   Primary keyword: {t['primary_keyword']}")
-            lines.append(f"   Supporting: {', '.join(t['supporting_keywords'][:2])}")
+            lines.append(f"   Supporting: {', '.join(t.get('supporting_keywords', []))[:2]}")
             lines.append(f"   Angle: {t['content_angle'][:80]}...")
 
         lines.append(f"\n🔍 Comparisons ({len(plan['comparisons'])}):\n")
