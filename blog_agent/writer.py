@@ -70,12 +70,15 @@ You must ONLY use facts, numbers, names, dates, and claims from the research bri
 - Direct quotes where available
 - Concrete examples or incidents
 
-## Structure
+## SEO Heading Structure
 
-Write a full blog post (800-1200 words). Include:
-- A strong opening (one specific fact, scene, or claim — not a definition or generic intro)
-- 4-6 body sections with descriptive headings
-- An ending that stops on the last useful thought (no recap, no generic send-off)
+{heading_structure}
+
+Follow this exact heading hierarchy:
+- Use the H1 as your opening headline (formatted as markdown # heading)
+- Use each H2 as a section heading (formatted as markdown ## heading)
+- Use H3s under their parent H2s (formatted as markdown ### heading)
+- Do NOT add extra headings not in this structure
 
 ## SEO integration
 
@@ -137,13 +140,34 @@ class Writer:
     def __init__(self, model: str | None = None):
         self.model = model
 
-    def write(self, research_brief: str, keywords: list[str] = None) -> str:
-        """Produce a blog draft from research brief and keywords."""
+    def write(self, research_brief: str, keywords: list[str] = None, seo_brief: dict = None) -> str:
+        """Produce a blog draft from research brief and keywords.
+
+        Args:
+            research_brief: Raw research from DuckDuckGo
+            keywords: List of target keywords
+            seo_brief: Optional SEO analysis (headings, titles, meta)
+        """
         keywords_str = " ".join(keywords) if keywords else "No specific keywords"
+
+        # Build heading structure string
+        if seo_brief and "headings" in seo_brief:
+            headings = seo_brief["headings"]
+            structure = f"""
+H1: {headings.get('h1', '')}
+
+"""
+            for h2 in headings.get("h2s", []):
+                structure += f"## {h2}\n"
+                for h3 in headings.get("h3s", {}).get(h2, []):
+                    structure += f"  - {h3}\n"
+        else:
+            structure = "No specific heading structure provided. Create your own."
 
         prompt = WRITER_PROMPT.format(
             research_brief=research_brief,
             keywords=keywords_str,
+            heading_structure=structure,
         )
 
         draft = chat(prompt, model=self.model, max_tokens=3000)
@@ -154,8 +178,8 @@ class Writer:
         prompt = REVIEW_PROMPT.format(draft=draft)
         return chat(prompt, model=self.model, max_tokens=2000)
 
-    def full_pipeline(self, research_brief: str, keywords: list[str] = None) -> dict:
+    def full_pipeline(self, research_brief: str, keywords: list[str] = None, seo_brief: dict = None) -> dict:
         """Write → Review → return both."""
-        draft = self.write(research_brief, keywords)
+        draft = self.write(research_brief, keywords, seo_brief)
         review = self.review(draft)
         return {"draft": draft, "review": review}

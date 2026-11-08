@@ -9,8 +9,8 @@ Usage:
 
 Steps:
 1. Research the topic with DuckDuckGo
-2. Extract SEO keywords
-3. Write the blog post (Clarity methodology)
+2. SEO Analyst → intent + keywords + SERP + titles + meta + headings
+3. Write the blog post (Clarity methodology, following SEO structure)
 4. Self-review against Clarity standards
 5. Edit the draft based on review (N iterations)
 6. Human review → approve or request changes
@@ -22,23 +22,10 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from blog_agent.research import research_topic
+from blog_agent.seo import SEOAnalyzer
 from blog_agent.writer import Writer
 from blog_agent.editor import Editor
 from blog_agent.human_loop import human_approval_loop
-
-
-def extract_keywords(research_brief: str) -> list[str]:
-    """Ask the model to extract 3-5 SEO keywords from the research brief."""
-    from blog_agent.utils import chat
-    prompt = f"""Extract 3-5 SEO keywords from this research brief.
-
-{research_brief}
-
-Return only a comma-separated list of keywords. No explanation."""
-    result = chat(prompt, max_tokens=100)
-    keywords = [k.strip() for k in result.replace(",", " ").split()]
-    keywords = [k for k in keywords if len(k) > 3]
-    return keywords[:5]
 
 
 def write_blog(
@@ -48,25 +35,38 @@ def write_blog(
     human_loop: bool = False,
     batch: bool = False,
 ) -> str:
-    """Full pipeline: research → write → review → edit → [human loop].
+    """Full pipeline: research → SEO → write → review → edit → [human loop].
 
     Returns:
         draft text (so caller can print/save as needed)
     """
+    # 1. Research
     print(f"\n🔍 Researching: {topic}")
     research_brief = research_topic(topic)
 
-    keywords = extract_keywords(research_brief)
-    if not batch:
-        print(f"🔑 Keywords: {', '.join(keywords)}")
+    # 2. SEO Analyst
+    print(f"\n📊 SEO Analysis...")
+    seo = SEOAnalyzer()
+    seo_brief = seo.full_analysis(topic, research_brief)
 
+    if not batch:
+        print(f"\n🔑 Primary keyword: {seo_brief['keywords']['primary']}")
+        print(f"🔑 Secondary keywords: {', '.join(seo_brief['keywords']['secondary'][:3])}")
+        print(f"🎯 Intent: {seo_brief['intent'].get('intent', 'N/A')}")
+        print(f"📰 Titles: {seo_brief['titles'][:2]}")
+        print(f"📝 Meta: {seo_brief['meta'][:80]}...")
+        print(f"📐 Headings: {len(seo_brief['headings'].get('h2s', []))} H2s")
+
+    # 3. Write
     print(f"\n✍️ Writing...")
     w = Writer()
-    draft = w.write(research_brief, keywords)
+    draft = w.write(research_brief, seo_brief["keywords"], seo_brief)
 
+    # 4. Review
     print(f"\n🔎 Reviewing...")
     review = w.review(draft)
 
+    # 5. Edit
     print(f"\n📝 Editing ({iterations} auto-iterations)...")
     e = Editor()
     edit_result = e.edit_with_iteration(
@@ -74,6 +74,7 @@ def write_blog(
     )
     draft = edit_result["final_draft"]
 
+    # 6. Human loop
     if human_loop:
         print("\n👤 Starting human review loop...")
         draft, feedback = human_approval_loop(
