@@ -6,6 +6,7 @@ Crawls a product website starting from the seed URL:
 3. Produces an aggregate summary of all pages
 
 Each page's summary is saved to disk. The aggregate is saved as `product_context.md`.
+The aggregate text is returned so it can be passed to LLM prompts without blowing context.
 """
 
 import re
@@ -97,7 +98,10 @@ def extract_title(html: str) -> str:
 
 
 def summarize_text(text: str, title: str = "") -> str:
-    """Summarize a page's text via LLM."""
+    """Summarize a page's text via LLM.
+
+    Caps output at 500 chars per page summary to control total context size.
+    """
     prompt = f"""Summarize the following webpage content in a concise, structured format.
 
 {title}
@@ -120,7 +124,7 @@ Be specific. List concrete features, numbers, and names. Do not invent informati
 class PageCrawler:
     """Crawl a website recursively, summarizing each page."""
 
-    def __init__(self, seed_url: str, max_pages: int = 15, max_text_chars: int = 10000):
+    def __init__(self, seed_url: str, max_pages: int = 100, max_text_chars: int = 10000):
         self.seed_url = seed_url
         self.max_pages = max_pages
         self.max_text_chars = max_text_chars
@@ -157,8 +161,8 @@ class PageCrawler:
         return True
 
     def _add_to_queue(self, url: str):
-        """Add URL to queue if not visited and domain matches."""
-        if url not in self.visited and self._is_internal(url) and "?" not in url:
+        """Add URL to queue if not visited, not in queue, and domain matches."""
+        if url not in self.visited and url not in self.queue and self._is_internal(url) and "?" not in url:
             self.queue.append(url)
 
     def crawl(self) -> dict:
@@ -206,13 +210,16 @@ class PageCrawler:
 
 
 def generate_aggregate_summary(page_summaries: dict[str, str]) -> str:
-    """Generate an aggregate summary from all page summaries."""
-    # Combine all summaries (up to ~10k chars for the LLM)
+    """Generate an aggregate summary from all page summaries.
+
+    Caps combined text at ~10k chars to stay within LLM context limits.
+    """
+    # Combine all summaries, cap total
     combined = ""
     for url, summary in page_summaries.items():
         combined += f"\n---\nURL: {url}\n{summary}"
 
-    combined = combined[:10000]  # cap
+    combined = combined[:10000]  # cap combined text
 
     prompt = f"""You are summarizing the complete website content of a product.
 You have been given summaries of every page on the website.
@@ -237,7 +244,11 @@ Website summaries:
 
 
 def save_crawl_results(results: dict[str, str], aggregate: str, content_path: str) -> str:
-    """Save crawl results to disk."""
+    """Save crawl results to disk.
+
+    Returns:
+        File path to the aggregate summary file.
+    """
     # Save individual page summaries
     os.makedirs(os.path.join(content_path, "pages"), exist_ok=True)
     for url, summary in results.items():
@@ -258,11 +269,11 @@ def save_crawl_results(results: dict[str, str], aggregate: str, content_path: st
     return agg_path
 
 
-def crawl_product(url: str, content_path: str, max_pages: int = 15) -> str:
+def crawl_product(url: str, content_path: str, max_pages: int = 100) -> str:
     """Run a full crawl with summarization.
 
     Returns:
-        Path to aggregate summary file.
+        The aggregate summary text content (not the file path).
     """
     print(f"\n🕷️ Crawling {url} (up to {max_pages} pages)...")
 
@@ -278,7 +289,9 @@ def crawl_product(url: str, content_path: str, max_pages: int = 15) -> str:
     print("\n📝 Generating aggregate summary...")
     aggregate = generate_aggregate_summary(results)
 
-    path = save_crawl_results(results, aggregate, content_path)
+    # Save to disk (returns file path)
+    save_crawl_results(results, aggregate, content_path)
     print(f"  ✓ Saved product_context.md ({len(aggregate)} chars)")
 
-    return path
+    # Return the aggregate text content (not the file path)
+    return aggregate

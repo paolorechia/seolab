@@ -62,7 +62,7 @@ def cmd_plan(name: str, description: str = "", audience: str = "", url: str = ""
     product_context = ""
     product_path = get_content_path(name)
     if url:
-        product_context = crawl_product(url, product_path, max_pages=12)
+        product_context = crawl_product(url, product_path, max_pages=100)
         if product_context:
             print(f"  ✓ Website context saved")
 
@@ -163,7 +163,7 @@ def write_article(
     product_name = product or "the product"
     if url:
         product_path = get_content_path(product)
-        product_context = crawl_product(url, product_path, max_pages=12)
+        product_context = crawl_product(url, product_path, max_pages=100)
         if product_context:
             print(f"  ✓ Website context saved")
 

@@ -13,7 +13,8 @@ from blog_agent.utils import chat
 TOPIC_GENERATOR_PROMPT = """You are a content strategist generating blog topics for a product.
 
 Product: {product}
-{product_description}
+Description: {product_description}
+Website Context:
 {product_website_context}
 Target audience: {audience}
 
@@ -44,7 +45,8 @@ content_angle: <description>
 COMPARISON_KEYWORDS_PROMPT = """You are an SEO analyst identifying comparison opportunities for a product.
 
 Product: {product}
-{product_description}
+Description: {product_description}
+Website Context:
 {product_website_context}
 
 Identify relevant comparison/alternative topics where our product should compete:
@@ -63,7 +65,8 @@ Only include comparisons where our product is a legitimate competitor. Reference
 AUDIENCE_KEYWORDS_PROMPT = """You are an SEO analyst mapping audience segments to keyword clusters.
 
 Product: {product}
-{product_description}
+Description: {product_description}
+Website Context:
 {product_website_context}
 Target audience: {audience}
 
@@ -89,20 +92,15 @@ class ProductKeywordPlanner:
         self.audience = audience
         self.product_context = product_context
 
-    def _desc_text(self) -> str:
-        desc = f"Product description: {self.product_description}\n" if self.product_description else ""
-        if self.product_context:
-            desc += f"\nProduct website context (from crawled pages):\n{self.product_context[:4000]}"
-        return desc
-
     def generate_topics(self) -> list[dict]:
         """Generate blog topic clusters around the product."""
-        desc = self._desc_text()
+        product_desc = f"Product description: {self.product_description}" if self.product_description else ""
+        website_context = f"Product website context (from crawled pages):\n{self.product_context[:4000]}" if self.product_context else "No website context available."
         result = chat(
             TOPIC_GENERATOR_PROMPT.format(
                 product=self.product,
-                product_description=desc,
-                product_website_context=desc,
+                product_description=product_desc,
+                product_website_context=website_context,
                 audience=self.audience,
             ),
             max_tokens=2000,
@@ -134,12 +132,13 @@ class ProductKeywordPlanner:
 
     def comparison_keywords(self) -> list[dict]:
         """Generate competitor comparison opportunities."""
-        desc = self._desc_text()
+        product_desc = f"Product description: {self.product_description}" if self.product_description else ""
+        website_context = f"Product website context (from crawled pages):\n{self.product_context[:4000]}" if self.product_context else "No website context available."
         result = chat(
             COMPARISON_KEYWORDS_PROMPT.format(
                 product=self.product,
-                product_description=desc,
-                product_website_context=desc,
+                product_description=product_desc,
+                product_website_context=website_context,
             ),
             max_tokens=1500,
         )
@@ -166,12 +165,13 @@ class ProductKeywordPlanner:
 
     def audience_mapping(self) -> list[dict]:
         """Map audience segments to keyword clusters."""
-        desc = self._desc_text()
+        product_desc = f"Product description: {self.product_description}" if self.product_description else ""
+        website_context = f"Product website context (from crawled pages):\n{self.product_context[:4000]}" if self.product_context else "No website context available."
         result = chat(
             AUDIENCE_KEYWORDS_PROMPT.format(
                 product=self.product,
-                product_description=desc,
-                product_website_context=desc,
+                product_description=product_desc,
+                product_website_context=website_context,
                 audience=self.audience,
             ),
             max_tokens=1500,
