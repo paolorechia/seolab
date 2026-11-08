@@ -21,6 +21,9 @@ Your job is to revise a draft based on review feedback while preserving factual 
 Research brief (fact source — DO NOT invent beyond this):
 {research_brief}
 
+Product website context (from crawled pages):
+{product_website_context}
+
 Current draft:
 {draft}
 
@@ -56,10 +59,12 @@ class Editor:
     def __init__(self, model: str | None = None):
         self.model = model
 
-    def edit(self, draft: str, review: str, research_brief: str = "") -> str:
+    def edit(self, draft: str, review: str, research_brief: str = "",
+             product_context: str = "") -> str:
         """Revise draft based on review feedback."""
         prompt = EDITOR_PROMPT.format(
             research_brief=research_brief,
+            product_website_context=product_context if product_context else "No website context available.",
             draft=draft,
             review=review,
         )
@@ -70,13 +75,14 @@ class Editor:
         draft: str,
         review: str,
         research_brief: str = "",
+        product_context: str = "",
         max_iterations: int = 3,
     ) -> dict:
         """Edit → Review → Edit loop. Returns all iterations."""
         history = []
 
         for i in range(max_iterations):
-            edited = self.edit(draft, review, research_brief)
+            edited = self.edit(draft, review, research_brief, product_context)
             review_again = chat(
                 EDITOR_REVIEW_PROMPT.format(draft=edited),
                 model=self.model,

@@ -28,6 +28,9 @@ Research brief:
 
 Target keywords: {keywords}
 
+Product website context (crawled from all pages):
+{product_website_context}
+
 ## ⚠️ CRITICAL: Facts and Evidence
 
 You must ONLY use facts, numbers, names, dates, and claims from the research brief above.
@@ -66,6 +69,7 @@ You must ONLY use facts, numbers, names, dates, and claims from the research bri
 ## Anchors you MUST include
 
 - Specific numbers, dates, and names from the research
+- The product name "{product_name}" with specific features/benefits from the website context above
 - Real company names, product names, tool names
 - Direct quotes where available
 - Concrete examples or incidents
@@ -140,15 +144,20 @@ class Writer:
     def __init__(self, model: str | None = None):
         self.model = model
 
-    def write(self, research_brief: str, keywords: list[str] = None, seo_brief: dict = None) -> str:
+    def write(self, research_brief: str, keywords: list[str] = None, seo_brief: dict = None,
+              product_name: str = "", product_context: str = "") -> str:
         """Produce a blog draft from research brief and keywords.
 
         Args:
             research_brief: Raw research from DuckDuckGo
             keywords: List of target keywords
             seo_brief: Optional SEO analysis (headings, titles, meta)
+            product_name: Product name (for anchoring)
+            product_context: Full website crawl context
         """
         keywords_str = " ".join(keywords) if keywords else "No specific keywords"
+        product_context_str = product_context if product_context else "No website context available."
+        product_name_str = product_name if product_name else "the product"
 
         # Build heading structure string
         if seo_brief and "headings" in seo_brief:
@@ -167,6 +176,8 @@ H1: {headings.get('h1', '')}
         prompt = WRITER_PROMPT.format(
             research_brief=research_brief,
             keywords=keywords_str,
+            product_website_context=product_context_str,
+            product_name=product_name_str,
             heading_structure=structure,
         )
 

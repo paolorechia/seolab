@@ -60,6 +60,7 @@ def init_db(db_path: str = DB_PATH):
             name TEXT NOT NULL UNIQUE,
             description TEXT DEFAULT '',
             audience TEXT DEFAULT '',
+            url TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -89,16 +90,28 @@ def init_db(db_path: str = DB_PATH):
             FOREIGN KEY (topic_id) REFERENCES topics(id)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS audience_segments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            segment TEXT NOT NULL,
+            pain_point TEXT DEFAULT '',
+            primary_keyword TEXT DEFAULT '',
+            content_format TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id)
+        )
+    """)
     conn.commit()
     conn.close()
 
 
-def create_product(name: str, description: str = "", audience: str = "") -> int:
+def create_product(name: str, description: str = "", audience: str = "", url: str = "") -> int:
     """Create a product. Returns product id."""
     conn = _get_conn()
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("INSERT OR IGNORE INTO products (name, description, audience) VALUES (?, ?, ?)",
-                 (name, description, audience))
+    conn.execute("INSERT OR IGNORE INTO products (name, description, audience, url) VALUES (?, ?, ?, ?)",
+                 (name, description, audience, url))
     product_id = conn.execute("SELECT id FROM products WHERE name = ?", (name,)).fetchone()[0]
     conn.commit()
     conn.close()
@@ -112,7 +125,7 @@ def get_product(name: str) -> Optional[dict]:
     conn.close()
     if not row:
         return None
-    return {"id": row[0], "name": row[1], "description": row[2], "audience": row[3]}
+    return {"id": row[0], "name": row[1], "description": row[2], "audience": row[3], "url": row[4]}
 
 
 def add_topic(product_id: int, title: str, intent: str = "", primary_keyword: str = "",
@@ -148,6 +161,39 @@ def create_article(product_id: int, topic_id: int, slug: str) -> int:
     conn.commit()
     conn.close()
     return article_id
+
+
+def add_audience_segment(product_id: int, segment: str, pain_point: str = "",
+                         primary_keyword: str = "", content_format: str = "") -> int:
+    """Add an audience segment to a product. Returns segment id."""
+    conn = _get_conn()
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute(
+        "INSERT INTO audience_segments (product_id, segment, pain_point, primary_keyword, content_format) VALUES (?, ?, ?, ?, ?)",
+        (product_id, segment, pain_point, primary_keyword, content_format)
+    )
+    segment_id = conn.execute(
+        "SELECT id FROM audience_segments ORDER BY id DESC LIMIT 1"
+    ).fetchone()[0]
+    conn.commit()
+    conn.close()
+    return segment_id
+
+
+def get_audience_segments(product_id: int) -> list:
+    """Get all audience segments for a product."""
+    conn = _get_conn()
+    rows = conn.execute(
+        "SELECT * FROM audience_segments WHERE product_id = ?",
+        (product_id,)
+    ).fetchall()
+    conn.close()
+    return [
+        {"id": r[0], "product_id": r[1], "segment": r[2],
+         "pain_point": r[3], "primary_keyword": r[4],
+         "content_format": r[5]}
+        for r in rows
+    ]
 
 
 def get_article(topic_id: int) -> Optional[dict]:

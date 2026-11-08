@@ -14,6 +14,7 @@ TOPIC_GENERATOR_PROMPT = """You are a content strategist generating blog topics 
 
 Product: {product}
 {product_description}
+{product_website_context}
 Target audience: {audience}
 
 Based on this product, generate 5-8 blog topic ideas that would drive relevant organic traffic.
@@ -22,12 +23,13 @@ For each topic, provide:
 - search_intent: the likely search intent (informational | commercial investigation | transactional)
 - primary_keyword: the main keyword phrase for this topic
 - supporting_keywords: 3-4 related keywords (comma-separated)
-- content_angle: the unique angle from the product's perspective
+- content_angle: the unique angle from the product's perspective (should reference specific product features)
 
 Requirements:
 - Mix of informational (top-funnel) and commercial (mid-funnel) topics
 - Topics should be specific enough to write about, broad enough to drive traffic
 - Angles should leverage the product's unique positioning (not generic content)
+- **Must include specific product features and capabilities from the website context**
 - Target audience context should inform which topics to prioritize
 
 Return in this exact format for each topic:
@@ -43,6 +45,7 @@ COMPARISON_KEYWORDS_PROMPT = """You are an SEO analyst identifying comparison op
 
 Product: {product}
 {product_description}
+{product_website_context}
 
 Identify relevant comparison/alternative topics where our product should compete:
 - Direct product-vs-product comparisons
@@ -54,13 +57,14 @@ Return in this exact format:
 1. <comparison topic title> | primary: <keyword> | secondary: <comma-separated>
 2. ...
 
-Only include comparisons where our product is a legitimate competitor."""
+Only include comparisons where our product is a legitimate competitor. Reference specific product features."""
 
 
 AUDIENCE_KEYWORDS_PROMPT = """You are an SEO analyst mapping audience segments to keyword clusters.
 
 Product: {product}
 {product_description}
+{product_website_context}
 Target audience: {audience}
 
 Identify which audience segments are most valuable and their corresponding keyword clusters:
@@ -78,18 +82,27 @@ content_format: <guide|comparison|tutorial|overview>
 
 
 class ProductKeywordPlanner:
-    def __init__(self, product: str, product_description: str = "", audience: str = ""):
+    def __init__(self, product: str, product_description: str = "", audience: str = "",
+                 product_context: str = ""):
         self.product = product
         self.product_description = product_description
         self.audience = audience
+        self.product_context = product_context
+
+    def _desc_text(self) -> str:
+        desc = f"Product description: {self.product_description}\n" if self.product_description else ""
+        if self.product_context:
+            desc += f"\nProduct website context (from crawled pages):\n{self.product_context[:4000]}"
+        return desc
 
     def generate_topics(self) -> list[dict]:
         """Generate blog topic clusters around the product."""
-        desc = f"Product description: {self.product_description}\n" if self.product_description else ""
+        desc = self._desc_text()
         result = chat(
             TOPIC_GENERATOR_PROMPT.format(
                 product=self.product,
                 product_description=desc,
+                product_website_context=desc,
                 audience=self.audience,
             ),
             max_tokens=2000,
@@ -121,11 +134,12 @@ class ProductKeywordPlanner:
 
     def comparison_keywords(self) -> list[dict]:
         """Generate competitor comparison opportunities."""
-        desc = f"Product description: {self.product_description}\n" if self.product_description else ""
+        desc = self._desc_text()
         result = chat(
             COMPARISON_KEYWORDS_PROMPT.format(
                 product=self.product,
                 product_description=desc,
+                product_website_context=desc,
             ),
             max_tokens=1500,
         )
@@ -152,11 +166,12 @@ class ProductKeywordPlanner:
 
     def audience_mapping(self) -> list[dict]:
         """Map audience segments to keyword clusters."""
-        desc = f"Product description: {self.product_description}\n" if self.product_description else ""
+        desc = self._desc_text()
         result = chat(
             AUDIENCE_KEYWORDS_PROMPT.format(
                 product=self.product,
                 product_description=desc,
+                product_website_context=desc,
                 audience=self.audience,
             ),
             max_tokens=1500,
