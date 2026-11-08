@@ -1,0 +1,61 @@
+{
+  "intent": {
+    "intent": "commercial investigation",
+    "angle": "The user is evaluating different transcription approaches to decide which solution best fits their budget, security requirements, and accuracy needs before making a purchasing decision.",
+    "format": "comparison"
+  },
+  "keywords": {
+    "primary": "local vs cloud transcription",
+    "secondary": [
+      "on-premise transcription",
+      "cloud transcription privacy",
+      "edge AI transcription",
+      "data sovereignty in voice AI",
+      "whisper open source transcription"
+    ]
+  },
+  "serp": {
+    "result_types": "comparison, guide, opinion piece, product page",
+    "typical_length": "medium (~1000w) | long (~1500w+)",
+    "common_angle": "technical comparison focusing on accuracy, latency, and cost; beginner-friendly \"how to choose\" guides; product-focused comparisons (e.g., Whisper vs. Azure)",
+    "content_gaps": "detailed total cost of ownership (TCO) calculators for specific enterprise volumes; HIPAA/GDPR compliance case studies with legal nuance; hybrid architecture implementation guides; performance benchmarks for specific hardware setups (e.g., consumer GPUs vs. enterprise servers); offline/air-gapped deployment strategies."
+  },
+  "titles": [
+    "1. Local vs Cloud Transcription: Which Saves More Money?",
+    "2. Local vs Cloud Transcription: Speed, Accuracy, Cost Guide",
+    "3. Local vs Cloud Transcription: Best Choice for Your Business"
+  ],
+  "meta": "local vs cloud transcription: compare on-premise, cloud, and edge AI options. Discover the best solution for privacy and accuracy. Read our guide.",
+  "headings": {
+    "h1": "Local vs Cloud Transcription: Choosing the Right Architecture for Secure, Scalable Audio Processing",
+    "h2s": [
+      "Cloud Transcription Privacy and Data Sovereignty in Voice AI: Understanding External Risks",
+      "On-Premise Transcription: Control, Security, and Infrastructure Trade-offs",
+      "Edge AI Transcription: Balancing Performance with Privacy",
+      "Whisper Open Source Transcription: Powering Hybrid and Local Workflows",
+      "Decision Matrix: When to Choose Local vs Cloud Solutions"
+    ],
+    "h3s": {
+      "Cloud Transcription Privacy and Data Sovereignty in Voice AI: Understanding External Risks": [
+        "Compliance requirements for healthcare, finance, and legal industries",
+        "The reality of data retention and third-party model training"
+      ],
+      "On-Premise Transcription: Control, Security, and Infrastructure Trade-offs": [
+        "Hardware requirements and maintenance costs vs. cloud subscription models",
+        "Offline capabilities and network independence for sensitive environments"
+      ],
+      "Edge AI Transcription: Balancing Performance with Privacy": [
+        "Reducing latency for real-time local processing",
+        "Comparing local model size vs. accuracy benchmarks"
+      ],
+      "Whisper Open Source Transcription: Powering Hybrid and Local Workflows": [
+        "Integrating open-source models into enterprise ecosystems",
+        "Fine-tuning proprietary models for specific industry jargon"
+      ],
+      "Decision Matrix: When to Choose Local vs Cloud Solutions": [
+        "Evaluating data sensitivity, budget, and volume needs",
+        "Hybrid approaches for optimal security and scalability"
+      ]
+    }
+  }
+}

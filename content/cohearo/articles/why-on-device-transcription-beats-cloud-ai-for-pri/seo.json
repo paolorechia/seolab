@@ -1,0 +1,40 @@
+{
+  "intent": {
+    "intent": "informational",
+    "angle": "The user wants to understand the technical and privacy implications of running AI models locally versus using cloud services to learn why on-device processing is superior for data security.",
+    "format": "overview"
+  },
+  "keywords": {
+    "primary": "on-device transcription",
+    "secondary": [
+      "cloud AI privacy",
+      "on-device LLM",
+      "data sovereignty",
+      "whisper.cpp",
+      "GDPR compliance"
+    ]
+  },
+  "serp": {
+    "result_types": "blog, comparison, opinion piece, guide",
+    "typical_length": "medium (~1000w)",
+    "common_angle": "technical comparison and privacy-focused opinion piece",
+    "content_gaps": "lack of quantitative benchmarking on battery thermal impact during transcription, absence of specific legal compliance checklists (GDPR/HIPAA) for enterprise adoption, and minimal coverage of hybrid processing models' privacy trade-offs"
+  },
+  "titles": [
+    "1. On-Device Transcription: Secure Privacy Without Cloud AI",
+    "2. Why On-Device Transcription Beats Cloud AI for Data",
+    "3. On-Device Transcription vs Cloud: Better Privacy Control"
+  ],
+  "meta": "On-device transcription keeps your data sovereign. Learn why running whisper.cpp and on-device LLMs beats cloud AI privacy risks for GDPR compliance. Discover the secure edge today.",
+  "headings": {
+    "h1": "Why On-Device Transcription Beats Cloud AI for Privacy and Security",
+    "h2s": [
+      "The Privacy Paradox of Cloud AI Transcription",
+      "On-Device LLMs: Keeping Your Data Sovereign",
+      "Technical Deep Dive: How Whisper.cpp Enables Local Processing",
+      "GDPR Compliance and Data Handling for Enterprise Users",
+      "Performance Trade-offs vs. Privacy Benefits"
+    ],
+    "h3s": {}
+  }
+}

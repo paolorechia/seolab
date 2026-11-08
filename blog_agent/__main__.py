@@ -2,14 +2,14 @@
 Blog Agent — end-to-end blog writing pipeline.
 
 Commands:
-    add-product "Product Name" --description "..." --audience "..."   Create a product
-    plan "Product Name" --description "..." --audience "..."          Generate content plan
-    write --topic "topic" --product "Product Name"                    Write article
+    add-product "Product Name" --description "..."   Create a product
+    plan "Product Name" --description "..."           Research → Topics
+    write --topic "topic" --product "Product Name"    Write → Review → Edit → Human
 
 Usage:
-    uv run python -m blog_agent add-product Cohearo --description "On-device transcription app" --audience "knowledge workers"
-    uv run python -m blog_agent plan Cohearo --description "On-device transcription app" --audience "knowledge workers"
-    uv run python -m blog_agent write --topic "Why on-device transcription beats cloud AI" --product "Cohearo" --product-desc "On-device transcription app" --audience "knowledge workers" --fast --batch
+    uv run python -m blog_agent add-product Cohearo --description "On-device transcription app"
+    uv run python -m blog_agent plan Cohearo --description "..."
+    uv run python -m blog_agent write --topic "Why on-device beats cloud AI" --product Cohearo
 """
 
 import argparse
@@ -26,9 +26,9 @@ from blog_agent.keyword_planner import ProductKeywordPlanner
 from blog_agent.persistence import *
 
 
-def cmd_add_product(name: str, description: str = "", audience: str = "") -> int:
-    """Create a product. Returns product id."""
-    product_id = create_product(name, description, audience)
+def cmd_add_product(name: str, description: str = "") -> int:
+    """Create a product. No audience — audience is part of the plan."""
+    product_id = create_product(name, description, "")
     print(f"✓ Created product: {name} (id={product_id})")
     return product_id
 
@@ -36,7 +36,7 @@ def cmd_add_product(name: str, description: str = "", audience: str = "") -> int
 def cmd_plan(name: str, description: str = "", audience: str = "") -> dict:
     """Generate content plan for a product.
 
-    Returns plan dict. Saves topics to DB.
+    Research loop → generates topics, saves to DB.
     """
     # Ensure product exists
     product = get_product(name)
@@ -45,10 +45,16 @@ def cmd_plan(name: str, description: str = "", audience: str = "") -> dict:
     else:
         product_id = create_product(name, description, audience)
 
+    print(f"\n📊 Researching & Planning for: {name}")
+
+    # Research the product/competitors
+    research_brief = research_topic(description if description else name)
+
+    # Generate topics from research + product context
     planner = ProductKeywordPlanner(name, description, audience)
     plan = planner.full_plan()
 
-    print(f"\n📦 Product Keyword Planner for: {name}")
+    print(f"\n📦 Keyword Planner results:")
     print(planner.plan_to_text(plan))
 
     # Save topics to DB
@@ -62,12 +68,10 @@ def cmd_plan(name: str, description: str = "", audience: str = "") -> dict:
                 supporting_keywords=topic_data.get("supporting_keywords", []),
                 content_angle=topic_data.get("content_angle", ""),
             )
-            print(f"  ✓ Added topic: {topic_data.get('topic_title', '')[:60]}...", file=sys.stderr)
         except Exception as e:
-            print(f"  ✗ Failed to add topic: {e}", file=sys.stderr)
+            print(f"  ⚠️ Failed: {e}", file=sys.stderr)
 
-    # Save comparisons to DB (as topics with special intent)
-    for comp in plan["comparisons"][:5]:  # Top 5 comparisons
+    for comp in plan["comparisons"][:5]:
         try:
             add_topic(
                 product_id,
@@ -78,10 +82,14 @@ def cmd_plan(name: str, description: str = "", audience: str = "") -> dict:
                 content_angle=f"Competitive comparison angle for {name}",
             )
         except Exception as e:
-            print(f"  ✗ Failed to add comparison: {e}", file=sys.stderr)
+            print(f"  ⚠️ Failed: {e}", file=sys.stderr)
 
-    # Save audiences to DB
-    plan["audiences"] = []  # Don't save as topics, just return
+    # Save research brief
+    slug = name.lower().replace(" ", "-").replace("/", "-")
+    content_path = get_content_path(name)
+    save_md(content_path, "research_brief", research_brief)
+
+    plan["audiences"] = []
     return plan
 
 
@@ -89,8 +97,6 @@ def write_article(
     topic: str,
     product: str = "",
     product_description: str = "",
-    audience: str = "",
-    product_desc: str = "",
     iterations: int = 2,
     human_loop: bool = False,
     batch: bool = False,
@@ -98,21 +104,19 @@ def write_article(
 ) -> str:
     """Write a blog article.
 
-    Steps: research → SEO → write → review → edit → [human loop]
+    Pipeline:
+      write → review
+      review → edit → review (loop)
+      edit → human → edit (loop)
+      human → approve
+
     Each step saves artifacts to disk for persistence.
     """
-    # Determine product description and audience
-    prod_desc = product_desc or product_description
-    prod_audience = audience
-
     # Ensure product exists
     if product:
         product_id = get_product(product)
-        if not product_id:
-            product_id = create_product(product, prod_desc, prod_audience)
-        print(f"\n📦 Using product: {product} (id={product_id})")
-    else:
-        product_id = None
+        if product_id:
+            print(f"\n📦 Using product: {product} (id={product_id})")
 
     # 1. Research
     print(f"\n🔍 Researching: {topic}")
@@ -162,21 +166,18 @@ def write_article(
         save_md(content_path, "review", review)
         print(f"  ✓ Saved review.md")
 
-    # 5. Edit
-    if fast:
-        print(f"\n⏭️ Skipping auto-edit (--fast)")
-    else:
-        print(f"\n📝 Editing ({iterations} auto-iterations)...")
-        e = Editor()
-        edit_result = e.edit_with_iteration(
-            draft, review, research_brief, max_iterations=iterations
-        )
-        draft = edit_result["final_draft"]
+    # 5. Edit (auto loop)
+    print(f"\n📝 Editing ({iterations} auto-iterations)...")
+    e = Editor()
+    edit_result = e.edit_with_iteration(
+        draft, review, research_brief, max_iterations=iterations
+    )
+    draft = edit_result["final_draft"]
 
-        # Save edit
-        if product:
-            save_md(content_path, "edit", draft)
-            print(f"  ✓ Saved edit.md")
+    # Save edit
+    if product:
+        save_md(content_path, "edit", draft)
+        print(f"  ✓ Saved edit.md")
 
     # 6. Human loop
     if human_loop:
@@ -187,15 +188,10 @@ def write_article(
 
     # Final save
     if product:
-        slug = topic.lower().replace(" ", "-").replace("/", "-")[:50]
-        final_path = os.path.join(content_path, "final.md")
         save_md(content_path, "final", draft)
-        print(f"  ✓ Saved final.md")
-
         print(f"\n💾 Artifacts saved to: {content_path}")
         return draft
     else:
-        print(f"\n💾 Draft saved to: {topic.lower().replace(' ', '-').replace('/', '-')[:50]}.md")
         return draft
 
 
@@ -207,20 +203,18 @@ def main():
     add_product_parser = subparsers.add_parser("add-product", help="Create a product")
     add_product_parser.add_argument("name", help="Product name")
     add_product_parser.add_argument("--description", default="", help="Product description")
-    add_product_parser.add_argument("--audience", default="", help="Target audience")
 
     # plan subcommand
-    plan_parser = subparsers.add_parser("plan", help="Generate content plan for a product")
+    plan_parser = subparsers.add_parser("plan", help="Research → Topics for a product")
     plan_parser.add_argument("name", help="Product name")
     plan_parser.add_argument("--description", default="", help="Product description")
-    plan_parser.add_argument("--audience", default="", help="Target audience")
+    plan_parser.add_argument("--audience", default="", help="Target audience (optional)")
 
     # write subcommand
     write_parser = subparsers.add_parser("write", help="Write a blog post")
     write_parser.add_argument("--topic", required=True, help="The topic to write about")
     write_parser.add_argument("--product", default="", help="Product name")
     write_parser.add_argument("--product-desc", default="", help="Product description")
-    write_parser.add_argument("--audience", default="", help="Target audience")
     write_parser.add_argument("--iterations", type=int, default=2, help="Edit iterations")
     write_parser.add_argument("--loop", action="store_true", help="Human review")
     write_parser.add_argument("--print", action="store_true", help="Print to stdout")
@@ -230,11 +224,15 @@ def main():
     args = parser.parse_args()
 
     if args.cmd == "add-product":
-        product_id = cmd_add_product(args.name, args.description, args.audience)
+        product_id = cmd_add_product(args.name, args.description)
         return
 
     if args.cmd == "plan":
-        plan = cmd_plan(args.name, args.description, args.audience)
+        plan = cmd_plan(
+            args.name,
+            args.description,
+            args.audience,
+        )
         return
 
     if args.cmd == "write":
@@ -242,8 +240,6 @@ def main():
             topic=args.topic,
             product=args.product,
             product_description=args.product_desc or "",
-            audience=args.audience,
-            product_desc=args.product_desc or "",
             iterations=args.iterations,
             human_loop=args.loop,
             batch=args.batch,

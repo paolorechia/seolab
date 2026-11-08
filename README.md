@@ -6,17 +6,14 @@ End-to-end blog writing system with persistence, product-aware content planning,
 
 ```bash
 # 1. Create a product
-uv run python -m blog_agent add-product Cohearo --description "On-device transcription app" --audience "knowledge workers"
+uv run python -m blog_agent add-product Cohearo --description "On-device transcription app"
 
-# 2. Generate content plan
-uv run python -m blog_agent plan Cohearo --description "..." --audience "..."
+# 2. Research → Topics
+uv run python -m blog_agent plan Cohearo --description "..." --audience "knowledge workers"
 
 # 3. Write an article
-uv run python -m blog_agent write --topic "Why on-device transcription beats cloud AI" \
-  --product Cohearo --product-desc "..." --audience "..." --fast --batch
-
-# 4. Interactive review (with human loop)
-uv run python -m blog_agent write --topic "..." --product Cohearo --loop
+uv run python -m blog_agent write --topic "Why on-device beats cloud AI" \
+  --product Cohearo --fast --batch
 ```
 
 ## Architecture
@@ -32,72 +29,80 @@ uv run python -m blog_agent write --topic "..." --product Cohearo --loop
 ┌─────────────────────────────────────────────────┐
 │              Content Pipeline                     │
 │                                                   │
-│  add-product → create product + audience         │
-│  plan → generate topics + angles + comparisons   │
-│  write → research → SEO → write → review → edit  │
-│  human-loop → approve | change | rewrite | lint  │
+│  add-product → product                           │
+│  plan → research → topics                        │
+│  write → review → edit → human → approve         │
 └─────────────────────────────────────────────────┘
 ```
 
-## Components
+## Commands
 
-### 1. Persistence (`blog_agent/persistence.py`)
-
-**SQLite Tables:**
-- `products` - product name, description, audience
-- `topics` - title, intent, keywords, content angle
-- `articles` - links to topics, pipeline status
-
-**File Structure:**
-```
-content/
-  cohearo/
-    articles/
-      why-on-device-transcription-beats-cloud-ai-for-pri/
-        research.md    ← DuckDuckGo research brief
-        seo.json       ← SEO brief (keywords, SERP, headings)
-        draft.md       ← initial draft
-        review.md      ← Clarity review
-        edit.md        ← edited version
-        final.md       ← final draft
-```
-
-### 2. Keyword Planner (`blog_agent/keyword_planner.py`)
-
-Generates topic clusters from product context:
-- **Content topics** (5-8) with intent, keywords, angles
-- **Comparisons** (product vs competitors)
-- **Audience segments** with pain points
-
-### 3. Pipeline Steps
-
-| Step | Command | Artifacts Saved |
-|------|---------|----------------|
-| Research | DuckDuckGo | `research.md` |
-| SEO Analysis | Intent + keywords + SERP | `seo.json` |
-| Write | Clarity methodology | `draft.md` |
-| Review | Clarity review | `review.md` |
-| Edit | Auto-revision loop | `edit.md`, `final.md` |
-| Human Review | Interactive CLI | feedback loop |
-
-## Pipeline Commands
+### 1. Add Product
 
 ```bash
-# Step 1: Add product (one-time setup)
-uv run python -m blog_agent add-product ProductName --description "..." --audience "..."
-
-# Step 2: Generate content plan
-uv run python -m blog_agent plan ProductName --description "..." --audience "..."
-
-# Step 3: Write article (with product context)
-uv run python -m blog_agent write --topic "topic" --product "Product" --product-desc "..." --audience "..."
-
-# Step 4: Write without product context
-uv run python -m blog_agent write --topic "topic" --fast --batch
-
-# Step 5: Write with human loop
-uv run python -m blog_agent write --topic "topic" --product "Product" --loop
+uv run python -m blog_agent add-product Cohearo --description "On-device transcription app"
 ```
+
+Creates a product with no audience. Audience is added during planning.
+
+### 2. Plan (Research → Topics)
+
+```bash
+uv run python -m blog_agent plan Cohearo --description "..." --audience "knowledge workers"
+```
+
+**Flow:**
+- Researches product + competitors
+- Generates topic clusters (5-8 topics)
+- Identifies comparison opportunities (product vs competitors)
+- Maps audience segments
+- Saves topics to SQLite + research brief to `content/`
+- Saves research brief to `content/<product>/research_brief.md`
+
+**Output:**
+```
+📦 Keyword Planner results:
+📚 Topics (7):
+  1. Why On-Device Transcription is Critical for Enterprise...
+  2. Reducing API Costs with Edge AI Transcription for Teams...
+  3. Offline Meeting Transcription: How to Work Without Internet...
+  4. Best Privacy-Friendly Transcription Alternatives...
+  5. Integrating On-Device Transcription into Local Workflows...
+  6. Latency vs. Accuracy: Why Local Transcription is Catching Up...
+  7. How to Prepare Your Device for On-Device AI Workloads...
+
+🔍 Comparisons (8):
+  - Cohearo vs Otter.ai
+  - Best on-device transcription apps 2024
+  - Alternatives to cloud-based transcription services
+
+👥 Audience Segments (3):
+  - Academic researchers and interview journalists...
+  - Remote software engineers...
+  - Freelance content creators and podcasters...
+```
+
+### 3. Write Article
+
+```bash
+uv run python -m blog_agent write --topic "Why on-device beats cloud AI" --product Cohearo --fast --batch
+```
+
+**Pipeline:**
+```
+write → review
+review → edit → review (loop)
+edit → human → edit (loop)
+human → approve
+```
+
+**Steps:**
+1. **Research** → DuckDuckGo → research brief → `research.md`
+2. **SEO** → keywords + SERP + headings → `seo.json`
+3. **Write** → draft → `draft.md`
+4. **Review** → Clarity review → `review.md`
+5. **Edit** → revise (auto loop) → `edit.md`
+6. **Human** → approve / change → `final.md`
 
 ## Modes
 
@@ -109,44 +114,51 @@ uv run python -m blog_agent write --topic "topic" --product "Product" --loop
 | Print | `--print` | Print to stdout |
 | Loop | `--loop` | Human-in-the-loop |
 
-## Example: Cohearo (On-Device Transcription App)
+## File Structure
+
+```
+content.db          ← SQLite for metadata
+content/
+  cohearo/          ← product directory
+    research_brief.md ← Plan research brief
+    articles/
+      local-vs-cloud-transcription/
+        research.md     ← DuckDuckGo research
+        seo.json        ← SEO brief
+        draft.md        ← initial draft
+        review.md       ← Clarity review
+        edit.md         ← edited version
+        final.md        ← final draft
+```
+
+## Example Flow
 
 ```bash
-# Create product
-uv run python -m blog_agent add-product Cohearo --description "On-device transcription app" --audience "knowledge workers"
+# Step 1: Create product
+$ uv run python -m blog_agent add-product Cohearo --description "On-device transcription app"
+✓ Created product: Cohearo (id=1)
 
-# Generate plan
-uv run python -m blog_agent plan Cohearo --description "..." --audience "..."
+# Step 2: Research & plan
+$ uv run python -m blog_agent plan Cohearo --description "..." --audience "knowledge workers"
+📊 Researching & Planning for: Cohearo
+📦 Keyword Planner results:
+📚 Topics (7): ...
+🔍 Comparisons (8): ...
+👥 Audience Segments (3): ...
 
-# Output:
-# ✓ Created product: Cohearo (id=1)
-# 📦 Content Plan for: Cohearo
-# 
-# 📚 Topics (7):
-#   1. Why On-Device Transcription Is Critical for Enterprise Compliance...
-#   2. How to Create a Second Brain: Offloading Meeting Notes...
-#   3. The Hidden Cost of Cloud Transcription: Security Risks...
-#   4. Best On-Device AI Transcription Apps...
-#   5. Boosting Productivity with Offline Meeting Transcription...
-#   6. Reducing Cloud Storage Costs: The Case for Local AI...
-#   7. What Is On-Device AI? A Guide for Knowledge Workers...
-# 
-# 🔍 Comparisons (5):
-#   - Cohearo vs Otter.ai
-#   - Cohearo vs Rev Transcription...
-#   - Cohearo vs Whisper App...
-#   - Cohearo vs Notion AI
-#   - Best on-device transcription apps for iOS
-# 
-# 👥 Audience Segments (4):
-#   - Journalists and Interviewers
-#   - Academic Researchers
-#   - Legal Professionals
-#   - Remote Knowledge Workers
-
-# Write article
-uv run python -m blog_agent write --topic "Why on-device transcription beats cloud AI" \
-  --product Cohearo --product-desc "..." --audience "..." --fast --batch
+# Step 3: Write article (fast mode)
+$ uv run python -m blog_agent write --topic "Why on-device beats cloud AI" --product Cohearo --fast --batch
+🔍 Researching: Why on-device beats cloud AI
+  ✓ Saved research.md
+📊 SEO Analysis...
+  ✓ Saved seo.json
+✍️ Writing...
+  ✓ Saved draft.md
+🔎 Reviewing...
+  ✓ Saved review.md
+⏭️ Skipping auto-edit (--fast)
+  ✓ Saved edit.md
+💾 Artifacts saved to: content/cohearo/articles/why-on-device-beats-cloud-ai
 ```
 
 ## Persistence Benefits
