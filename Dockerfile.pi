@@ -6,7 +6,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Install gh CLI (GitHub CLI for SSO-authenticated pushes)
-RUN curl -fsSL "https://github.com/cli/cli/releases/download/v2.68.0/gh_2.68.0_linux_amd64.deb" -o /tmp/gh.deb \
+# aarch64/arm64 (Raspberry Pi, AWS Graviton, etc.)
+RUN curl -fsSL "https://github.com/cli/cli/releases/download/v2.68.0/gh_2.68.0_linux_arm64.deb" -o /tmp/gh.deb \
   && dpkg -i /tmp/gh.deb \
   && rm /tmp/gh.deb
 
