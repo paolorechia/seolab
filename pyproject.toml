@@ -4,12 +4,9 @@ version = "0.1.0"
 description = "AI agent system for blog writing and SEO"
 requires-python = ">=3.12"
 dependencies = [
-    "crewai[tools]>=0.100",
+    "openai>=1.0.0",
     "python-dotenv>=1.0",
 ]
-
-[tool.crewai]
-type = "openai"
 
 [tool.uv]
 index-url = "https://pypi.org/simple"

@@ -1,8 +1,14 @@
 FROM node:24-bookworm-slim
 
+# Install system deps + curl (needed for uv installer) + build tools for native packages
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends bash ca-certificates git ripgrep \
+  && apt-get install -y --no-install-recommends bash ca-certificates git ripgrep python3 python3-venv python3-pip curl build-essential \
   && rm -rf /var/lib/apt/lists/*
+
+# Install uv (fast Python package manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
 WORKDIR /workspace
