@@ -16,6 +16,18 @@ Your job is to revise a draft based on review feedback while preserving factual 
 3. **Use [TK: specific question]** when you need information the research brief didn't supply.
 4. **It is better to cut than invent.** If a passage has no factual support, cut it.
 
+## Product Mentions
+
+- {product_name} must be mentioned 6-8 times throughout the piece.
+- If the review says the product isn't mentioned enough, add mentions with specific features.
+- Never remove a product mention unless it contradicts the facts.
+
+## Audience Fit
+
+- The piece is written for: {audience}
+- Ensure the language, tone, and examples match this audience.
+- If the review flags audience mismatch, fix it.
+
 ## Input
 
 Research brief (fact source — DO NOT invent beyond this):
@@ -60,11 +72,13 @@ class Editor:
         self.model = model
 
     def edit(self, draft: str, review: str, research_brief: str = "",
-             product_context: str = "") -> str:
+             product_name: str = "", product_context: str = "", audience: str = "") -> str:
         """Revise draft based on review feedback."""
         prompt = EDITOR_PROMPT.format(
             research_brief=research_brief,
+            product_name=product_name if product_name else "the product",
             product_website_context=product_context if product_context else "No website context available.",
+            audience=audience if audience else "Tech professionals",
             draft=draft,
             review=review,
         )
@@ -75,14 +89,16 @@ class Editor:
         draft: str,
         review: str,
         research_brief: str = "",
+        product_name: str = "",
         product_context: str = "",
+        audience: str = "",
         max_iterations: int = 3,
     ) -> dict:
         """Edit → Review → Edit loop. Returns all iterations."""
         history = []
 
         for i in range(max_iterations):
-            edited = self.edit(draft, review, research_brief, product_context)
+            edited = self.edit(draft, review, research_brief, product_name, product_context, audience)
             review_again = chat(
                 EDITOR_REVIEW_PROMPT.format(draft=edited),
                 model=self.model,

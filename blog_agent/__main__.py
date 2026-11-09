@@ -161,11 +161,18 @@ def write_article(
     # Crawl product website if URL provided
     product_context = ""
     product_name = product or "the product"
+    product_audience = ""
     if url:
         product_path = get_content_path(product)
         product_context = crawl_product(url, product_path, max_pages=100)
         if product_context:
             print(f"  ✓ Website context saved")
+
+    # Get audience from product record
+    if product:
+        product_obj = get_product(product)
+        if product_obj and product_obj.get("audience", ""):
+            product_audience = product_obj["audience"]
 
     # 1. Research
     print(f"\n🔍 Researching: {topic}")
@@ -200,7 +207,8 @@ def write_article(
     print(f"\n✍️ Writing...")
     w = Writer()
     draft = w.write(research_brief, seo_brief["keywords"], seo_brief,
-                    product_name=product_name, product_context=product_context)
+                    product_name=product_name, product_context=product_context,
+                    audience=product_audience)
 
     # Save draft
     if product:
@@ -209,7 +217,7 @@ def write_article(
 
     # 4. Review
     print(f"\n🔎 Reviewing...")
-    review = w.review(draft)
+    review = w.review(draft, product_name=product_name, audience=product_audience)
 
     # Save review
     if product:
@@ -221,7 +229,9 @@ def write_article(
     e = Editor()
     edit_result = e.edit_with_iteration(
         draft, review, research_brief,
+        product_name=product_name,
         product_context=product_context,
+        audience=product_audience,
         max_iterations=iterations
     )
     draft = edit_result["final_draft"]
