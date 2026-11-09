@@ -6,8 +6,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Install gh CLI (GitHub CLI for SSO-authenticated pushes)
-ENV GH_VERSION=2.68.0
-RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.deb" -o /tmp/gh.deb \
+RUN curl -fsSL "https://github.com/cli/cli/releases/download/v2.68.0/gh_2.68.0_linux_amd64.deb" -o /tmp/gh.deb \
   && dpkg -i /tmp/gh.deb \
   && rm /tmp/gh.deb
 
@@ -15,12 +14,12 @@ RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_$
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
-# Configure git to use gh for auth (SSO + PAT via GH_TOKEN)
-# At runtime: pass GH_TOKEN env var to authenticate for SSO
-ENV GH_TOKEN=""
-RUN [ -z "$GH_TOKEN" ] || (echo "$GH_TOKEN" | gh auth login --with-token --hostname github.com 2>/dev/null; git config --global credential.helper store) || true
-
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
 WORKDIR /workspace
-ENTRYPOINT ["pi"]
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["pi"]
